@@ -17,9 +17,8 @@
 #include <iostream>
 #include <cmath>
 
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/float64.hpp"
+#include "ros/ros.h"
+#include "std_msgs/Float64.h"
 #define _USE_MATH_DEFINES
  
 using namespace std::chrono_literals;
@@ -27,37 +26,38 @@ using namespace std::chrono_literals;
 /* This example creates a subclass of Node and uses std::bind() to register a
  * member function as a callback from the timer. */
 
-class SineWavePublisher : public rclcpp::Node
+class SineWavePublisher
 {
 public:
-  SineWavePublisher()
-  : Node("minimal_publisher"), count_(0)
+  SineWavePublisher(ros::NodeHandle nh)
+  : nh_(nh), count_(0)
   {
-    publisher_ = this->create_publisher<std_msgs::msg::Float64>("topic", 10);
-    timer_ = this->create_wall_timer(
-      10ms, std::bind(&SineWavePublisher::timer_callback, this));
+    publisher_ = nh_.advertise<std_msgs::Float64>("topic", 10);
       current_time_ = 0.0;
   }
-
-private:
   void timer_callback()
   {
-    auto message = std_msgs::msg::Float64();
-    message.data = std::sin(M_PI * current_time_);
-    publisher_->publish(message);
+    auto message = std_msgs::Float64();
+    message.data = std::sin(M_PI * current_time_ / 4);
+    publisher_.publish(message);
     // std::cout << "Time " << current_time_ << " Value " << message.data << std::endl;
     current_time_ = current_time_ + 0.01;
   }
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr publisher_;
+  private:
+
+  ros::Publisher publisher_;
+  ros::NodeHandle nh_;
   size_t count_;
   float current_time_;
 };
 
 int main(int argc, char * argv[])
 {
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<SineWavePublisher>());
-  rclcpp::shutdown();
+  ros::init(argc, argv, "publisher_node");
+  ros::NodeHandle nh;
+  SineWavePublisher sine_wave_publisher_object(nh);
+  ros::Timer timerPublishTemperature = nh.createTimer(ros::Duration(0.01), std::bind(&SineWavePublisher::timer_callback, sine_wave_publisher_object));
+
+  ros::spin();
   return 0;
 }
